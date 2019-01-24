@@ -31,6 +31,7 @@ use "buffered"
 use "collections"
 use "net"
 use "promises"
+use "random"
 use "serialise"
 use "time"
 use "wallaroo/core/boundary"
@@ -48,6 +49,7 @@ use "wallaroo/ent/recovery"
 use "wallaroo/ent/router_registry"
 use "wallaroo/ent/checkpoint"
 use "wallaroo_labs/mort"
+use "wallaroo_labs/time"
 
 use @pony_asio_event_create[AsioEventID](owner: AsioEventNotify, fd: U32,
   flags: U32, nsec: U64, noisy: Bool)
@@ -111,6 +113,8 @@ actor GenSource[V: Any val] is Source
   let _source_name: String
   let _runner: Runner
   let _msg_id_gen: MsgIdGenerator = MsgIdGenerator
+  // !@
+  var _watermark_ts: U64 = 0
 
   new create(source_id: RoutingId, auth: AmbientAuth, pipeline_name: String,
     runner_builder: RunnerBuilder, partitioner_builder: PartitionerBuilder,
@@ -170,10 +174,14 @@ actor GenSource[V: Any val] is Source
   fun ref process_message() =>
     _metrics_reporter.pipeline_ingest(_pipeline_name, _source_name)
     let ingest_ts = WallClock.nanoseconds()
+    /// !@ remove me later, this is provisional
+    let r = Rand(Seconds(0), Seconds(10))
+    let event_ts = ingest_ts - (Seconds(30) + r.next())
+
     let pipeline_time_spent: U64 = 0
     var latest_metrics_id: U16 = 1
 
-    let watermark_ts = ingest_ts
+    _watermark_ts = _watermark_ts.max(event_ts)
 
     ifdef "trace" then
       @printf[I32](("Rcvd msg at " + _pipeline_name + " source\n").cstring())
@@ -191,7 +199,7 @@ actor GenSource[V: Any val] is Source
       _cur_value = _generator(next')
       (let is_finished, let last_ts) =
         _runner.run[V](_pipeline_name, pipeline_time_spent, next',
-          "gen-source-key", ingest_ts, watermark_ts, _source_id, this, _router,
+          "gen-source-key", event_ts, _watermark_ts, _source_id, this, _router,
           _msg_id_gen(), None, decode_end_ts, latest_metrics_id, ingest_ts,
           _metrics_reporter)
 

@@ -111,9 +111,7 @@ class TCPSourceNotify[In: Any val]
               " source\n").cstring())
           end
           let event_ts = _handler.event_time_ns(decoded)
-          _watermark_ts = if event_ts > _watermark_ts
-                          then event_ts
-                          else _watermark_ts end
+          _watermark_ts = _watermark_ts.max(event_ts)
 
           if decoded isnt None then
             _runner.run[In](_pipeline_name, pipeline_time_spent, decoded,
