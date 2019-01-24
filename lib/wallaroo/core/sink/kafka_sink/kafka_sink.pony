@@ -34,6 +34,7 @@ use "wallaroo/ent/barrier"
 use "wallaroo/ent/recovery"
 use "wallaroo/ent/checkpoint"
 use "wallaroo_labs/mort"
+use "wallaroo_labs/time"
 
 actor KafkaSink is (Sink & KafkaClientManager & KafkaProducer)
   // Steplike

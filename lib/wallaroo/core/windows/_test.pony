@@ -32,9 +32,6 @@ actor Main is TestList
     None
 
   fun tag tests(test: PonyTest) =>
-    test(_TestTumblingWindowsTimeoutTrigger)
-
-  fun tag xtests(test: PonyTest) =>
     // Windows
     test(_TestTumblingWindows)
     test(_TestTumblingWindowsTimeoutTrigger)

@@ -28,6 +28,7 @@ use "wallaroo/core/source"
 use "wallaroo/core/topology"
 use "wallaroo/ent/recovery"
 use "wallaroo_labs/mort"
+use "wallaroo_labs/time"
 
 primitive KafkaSourceNotifyBuilder[In: Any val]
   fun apply(source_id: RoutingId, pipeline_name: String, env: Env,

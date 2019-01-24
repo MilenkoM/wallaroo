@@ -80,7 +80,6 @@ class StageWatermarks
 
   fun ref check_effective_input_watermark(current_ts: U64): U64 =>
     var found_live_value = false
-
     var new_min: U64 = U64.max_value()
 
     for (u, (next_w, last_heard)) in _upstreams.pairs() do
@@ -90,7 +89,6 @@ class StageWatermarks
           found_live_value = true
         end
       else
-        @printf[I32]("!@ adding upstream to marked_remove\n".cstring())
         _upstreams_marked_remove.push(u)
       end
     end
@@ -111,7 +109,6 @@ class StageWatermarks
       _upstreams_marked_remove.push(0)
     end
 
-    @printf[I32]("new min is %s\n".cstring(), new_min.string().cstring())
     if new_min > _input_watermark then
       if found_live_value then
         _input_watermark = new_min
@@ -120,12 +117,8 @@ class StageWatermarks
       // the case that we haven't heard from any upstream past our threshold,
       // in which case we will trigger all windows. But we keep our input
       // watermark at its former value in that case.
-      @printf[I32]("new min is %s, max val is %s\n".cstring(),
-                  new_min.string().cstring(), U64.max_value().string().cstring())
       new_min
     else
-      @printf[I32]("returning old input_wmrk %s\n".cstring(),
-                   _input_watermark.string().cstring())
       _input_watermark
     end
 
