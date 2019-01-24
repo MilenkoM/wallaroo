@@ -356,7 +356,7 @@ class StateRunner[In: Any val, Out: Any val, S: State ref] is (Runner &
 
         OutputProcessor[Out](
           _next_runner, metrics_name, pipeline_time_spent,
-          o, key, on_timeout_ts, new_watermark_ts, old_watermark_ts,
+          o, key, output_watermark_ts, new_watermark_ts, old_watermark_ts,
           producer_id, producer, router, new_i_msg_uid, None, latest_ts,
           metrics_id, on_timeout_ts, metrics_reporter)
       | let os: Array[Out] val =>
@@ -368,7 +368,7 @@ class StateRunner[In: Any val, Out: Any val, S: State ref] is (Runner &
 
         OutputProcessor[Out](
           _next_runner, metrics_name, pipeline_time_spent,
-          os, key, on_timeout_ts, new_watermark_ts, old_watermark_ts,
+          os, key, output_watermark_ts, new_watermark_ts, old_watermark_ts,
           producer_id, producer, router, new_i_msg_uid, None, latest_ts,
           metrics_id, on_timeout_ts, metrics_reporter)
       end
