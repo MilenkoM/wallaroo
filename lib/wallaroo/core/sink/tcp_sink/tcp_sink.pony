@@ -40,6 +40,7 @@ use "wallaroo/ent/network"
 use "wallaroo/ent/recovery"
 use "wallaroo/ent/checkpoint"
 use "wallaroo_labs/mort"
+use "wallaroo_labs/time"
 use "wallaroo/core/initialization"
 use "wallaroo/core/invariant"
 use "wallaroo/core/messages"
@@ -228,7 +229,6 @@ actor TCPSink is Sink
     end
     try
       let encoded = _encoder.encode[D](data, _wb)?
-
       let next_seq_id = (_seq_id = _seq_id + 1)
       _writev(encoded, next_seq_id)
 

@@ -64,6 +64,12 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
 
     (let pane_count, _pane_size, _panes_per_slide, _panes_per_window,
       _delay) = _InitializePaneParameters(range, slide, delay)
+    @printf[I32]("&&&&&&&&&&&& Created %s with: %s %s %s %s\n".cstring(),
+                 _agg.name().cstring(),
+                 range.string().cstring(),
+                 slide.string().cstring(),
+                 delay.string().cstring(),
+                 watermark_ts.string().cstring())
 
     _panes = Array[(Acc | EmptyPane)](pane_count)
     _panes_start_ts = Array[U64](pane_count)
@@ -78,17 +84,25 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
   fun ref apply(input: In, event_ts: U64, watermark_ts: U64):
     (Array[Out] val, U64)
   =>
+    @printf[I32]("&&&&&&&&&&&& EVENT TS: %s WATERMARK TS: %s\n".cstring(),
+                 event_ts.string().cstring(), watermark_ts.string().cstring())
     try
       (let earliest_ts, let end_ts) = _earliest_and_end_ts()?
-
+      @printf[I32]("&&&&&&&&&&&& EVENT EARLIEST : %s END TS: %s\n".cstring(),
+                    earliest_ts.string().cstring(), end_ts.string().cstring())
       var applied = false
       if event_ts < end_ts then
+        @printf[I32]("&&&&&&&&&&&& EVENT Before apply input\n".cstring())
         _apply_input(input, event_ts, earliest_ts)
+        @printf[I32]("&&&&&&&&&&&& EVENT After apply input\n".cstring())
         applied = true
       end
 
       // Check if we need to trigger and clear windows
+      @printf[I32]("&&&&&&&&&&&& EVENT Before attempt\n".cstring())
       (let outs, let output_watermark_ts) = attempt_to_trigger(watermark_ts)
+      @printf[I32]("&&&&&&&&&&&& EVENT After attempt output_watermark_ts %s\n".cstring(),
+                   output_watermark_ts.string().cstring())
 
       // If we haven't already applied the input, do it now.
       if not applied then
@@ -99,7 +113,8 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
         end
         _apply_input(input, event_ts, new_earliest_ts)
       end
-
+      @printf[I32]("&&&&&&&&&&&& Outputting from window %s with output watermark %s outs size: %s\n".cstring(),
+      _agg.name().cstring(), output_watermark_ts.string().cstring(), outs.size().string().cstring())
       (outs, output_watermark_ts)
     else
       Fail()
@@ -131,7 +146,8 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
       end
     else
       ifdef debug then
-        @printf[I32]("Event ts %s is earlier than earliest window %s. Ignoring\n".cstring(), event_ts.string().cstring(), earliest_ts.string().cstring())
+        @printf[I32]("Event ts %s is earlier than earliest window %s. Ignoring\n".cstring(),
+        event_ts.string().cstring(), earliest_ts.string().cstring())
       end
     end
 
@@ -200,14 +216,20 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
     ((Out | None), U64, Bool)
   =>
     try
+
       let earliest_ts = _earliest_ts()?
       let window_end_ts = earliest_ts + _range
-
+      @printf[I32]("&&&&&&&&&&&& EVENT check first window earliest: %s window_end %s\n".cstring(),
+                   earliest_ts.string().cstring(), window_end_ts.string().cstring())
       if _should_trigger(earliest_ts, watermark_ts) then
         (let out, let output_watermark_ts) = _trigger_next(earliest_ts,
           window_end_ts, trigger_diff)?
+          @printf[I32]("&&&&&&&&&&&& EVENT triggered: %s %s\n".cstring(),
+                    window_end_ts.string().cstring(),
+                    output_watermark_ts.string().cstring())
         (out, output_watermark_ts, false)
       else
+        @printf[I32]("NOT TRIGGERING!!!!\n".cstring())
         (None, 0, true)
       end
     else

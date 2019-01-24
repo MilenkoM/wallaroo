@@ -350,12 +350,22 @@ class StateRunner[In: Any val, Out: Any val, S: State ref] is (Runner &
 
       match out
       | let o: Out =>
+        @printf[I32]("&&&&&&& %s OnTimeout StateRunner output old ts: %s  new ts %s\n".cstring(),
+        _state_initializer.name().cstring(),
+        old_watermark_ts.string().cstring(), new_watermark_ts.string().cstring())
+
         OutputProcessor[Out](
           _next_runner, metrics_name, pipeline_time_spent,
           o, key, on_timeout_ts, new_watermark_ts, old_watermark_ts,
           producer_id, producer, router, new_i_msg_uid, None, latest_ts,
           metrics_id, on_timeout_ts, metrics_reporter)
       | let os: Array[Out] val =>
+      if os.size() > 0 then
+        @printf[I32]("&&&&&&& %s OnTimeout StateRunner output old ts: %s  new ts %s\n".cstring(),
+        _state_initializer.name().cstring(),
+        old_watermark_ts.string().cstring(), new_watermark_ts.string().cstring())
+     end
+
         OutputProcessor[Out](
           _next_runner, metrics_name, pipeline_time_spent,
           os, key, on_timeout_ts, new_watermark_ts, old_watermark_ts,
@@ -434,12 +444,22 @@ class StateRunner[In: Any val, Out: Any val, S: State ref] is (Runner &
         match result
         | None => (true, computation_end)
         | let o: Out =>
+        @printf[I32]("&&&&&&& %s StateRunner output old ts: %s  new ts %s\n".cstring(),
+        _state_initializer.name().cstring(),
+        old_watermark_ts.string().cstring(), new_watermark_ts.string().cstring())
+
           OutputProcessor[Out](_next_runner, metric_name,
             pipeline_time_spent, o, key, event_ts, new_watermark_ts,
             old_watermark_ts, producer_id, producer, router, i_msg_uid,
             frac_ids, computation_end, new_metrics_id, worker_ingress_ts,
             metrics_reporter)
         | let os: Array[Out] val =>
+        if os.size() > 0 then
+          @printf[I32]("&&&&&&&& %s StateRunner (arr) output old ts: %s  new ts %s\n".cstring(),
+           _state_initializer.name().cstring(),
+           old_watermark_ts.string().cstring(), new_watermark_ts.string().cstring())
+         end
+
           OutputProcessor[Out](_next_runner, metric_name,
             pipeline_time_spent, os, key, event_ts, new_watermark_ts,
             old_watermark_ts, producer_id, producer, router, i_msg_uid,
