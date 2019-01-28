@@ -122,10 +122,11 @@ class val GlobalWindowStateInitializer[In: Any val, Out: Any val,
   fun state_wrapper(key: Key): StateWrapper[In, Out, Acc] =>
     GlobalWindow[In, Out, Acc](key, _agg)
 
-  fun val runner_builder(step_group_id: RoutingId, parallelization: USize):
-    RunnerBuilder
+  fun val runner_builder(step_group_id: RoutingId, parallelization: USize,
+    local_routing: Bool): RunnerBuilder
   =>
-    StateRunnerBuilder[In, Out, Acc](this, step_group_id, parallelization)
+    StateRunnerBuilder[In, Out, Acc](this, step_group_id, parallelization,
+      local_routing)
 
   fun timeout_interval(): U64 =>
     // Triggers on every message, so we don't need timeouts.
@@ -210,10 +211,11 @@ class val RangeWindowsStateInitializer[In: Any val, Out: Any val,
   fun state_wrapper(key: Key): StateWrapper[In, Out, Acc] =>
     RangeWindows[In, Out, Acc](key, _agg, _range, _slide, _delay)
 
-  fun val runner_builder(step_group_id: RoutingId, parallelization: USize):
-    RunnerBuilder
+  fun val runner_builder(step_group_id: RoutingId, parallelization: USize,
+    local_routing: Bool): RunnerBuilder
   =>
-    StateRunnerBuilder[In, Out, Acc](this, step_group_id, parallelization)
+    StateRunnerBuilder[In, Out, Acc](this, step_group_id, parallelization,
+      local_routing)
 
   fun timeout_interval(): U64 =>
     // !@ !TODO!: Decide if we should set a minimum to this interval to
@@ -337,10 +339,11 @@ class val TumblingCountWindowsStateInitializer[In: Any val, Out: Any val,
   fun state_wrapper(key: Key): StateWrapper[In, Out, Acc] =>
     TumblingCountWindows[In, Out, Acc](key, _agg, _count)
 
-  fun val runner_builder(step_group_id: RoutingId, parallelization: USize):
-    RunnerBuilder
+  fun val runner_builder(step_group_id: RoutingId, parallelization: USize,
+    local_routing: Bool): RunnerBuilder
   =>
-    StateRunnerBuilder[In, Out, Acc](this, step_group_id, parallelization)
+    StateRunnerBuilder[In, Out, Acc](this, step_group_id, parallelization,
+      local_routing)
 
   fun timeout_interval(): U64 =>
     5_000_000_000
