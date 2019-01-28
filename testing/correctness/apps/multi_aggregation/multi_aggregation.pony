@@ -57,6 +57,10 @@ primitive SumEvents is Aggregation[Event, Event, EventTotal]
     EventTotal(et1.sum_of_event_data + et2.sum_of_event_data)
 
   fun output(k: Key, window_end_ts: U64, et: EventTotal): Event =>
+    @printf[I32]("********* outputting %s %s %s\n".cstring(),
+     window_end_ts.string().cstring(), et.sum_of_event_data.string().cstring(),
+     k.cstring()
+    )
     Event(window_end_ts,et.sum_of_event_data, k)
 
   fun name(): String => "Sum Events"
@@ -98,15 +102,18 @@ primitive EventDecoder is FramedSourceHandler[Event]
   fun header_length(): USize => 4
 
   fun payload_length(data: Array[U8] iso): USize ? =>
-    @printf[I32]("getting payload length\n".cstring())
     USize.from[U32](data.read_u32(0)?.bswap())
 
   fun decode(data: Array[U8] val): Event ? =>
-    @printf[I32]("decoding\n".cstring())
-    (let t,_) = String.read_int[U64](0, 10)?
-    (let d,_) = String.read_int[U32](4, 10)?
-    let k = String.from_array(data.trim(8,11))
-    Event(t, d, k)
+    for i in data.values() do
+      @printf[I32]((i.string()+"\n").cstring())
+    end
+    (let t,_) = String.from_array(data.trim(0,4)).read_int[U64]()?
+    (let d,_) = String.from_array(data.trim(4,8)).read_int[U32]()?
+    let k = String.from_array(data.trim(8,12))
+    @printf[I32]("got event: %s %s %s\n".cstring(),
+    t.string().cstring(), d.string().cstring(), k.string().cstring())
+        Event(t, d, k)
 
   fun event_time_ns(e: Event): U64 =>
     e.event_time
