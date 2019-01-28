@@ -49,9 +49,10 @@ multi_aggregation_test:
 		--newline-file-sender _events.msg \
 		--validation-cmp \
 		--expected-file _expected.msg \
-		--log-level 1 \
+		--log-level error \
 		--command './multi_aggregation $(RUN_WITH_RESILIENCE)' \
-		--sink-expect 1 \
+		--sink-expect 2 \
+		--sink-expect-allow-more \
 		--sinks 1 \
 		--sources 1
 
