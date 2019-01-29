@@ -165,10 +165,8 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
     end
     (consume outs, output_watermark_ts)
 
-  fun ref trigger_all(output_watermark_ts: U64, watermarks: StageWatermarks):
-    (Array[Out] val, U64) ?
+  fun ref trigger_all(output_watermark_ts: U64): (Array[Out] val, U64) ?
   =>
-    let last_input_watermark = watermarks.input_watermark()
     var latest_output_watermark_ts = output_watermark_ts
 
     let earliest_ts = _panes_start_ts(_earliest_window_idx)?

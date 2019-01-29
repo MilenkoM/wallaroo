@@ -32,8 +32,12 @@ actor Main is TestList
     None
 
   fun tag tests(test: PonyTest) =>
+    test(_TestMessageAssignmentToTumblingWindows)
+
+  fun tag x_tests(test: PonyTest) =>
     // Windows
     test(_TestTumblingWindows)
+    test(_TestMessageAssignmentToTumblingWindows)
     test(_TestTumblingWindowsTimeoutTrigger)
     test(_TestSlidingWindows)
     test(_TestSlidingWindowsNoDelay)
