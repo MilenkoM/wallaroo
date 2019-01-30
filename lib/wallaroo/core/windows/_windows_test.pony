@@ -44,6 +44,26 @@ class iso _TestTumblingWindowsTimeoutTrigger is UnitTest
     h.assert_eq[USize](res_array(0)?, 111)
     h.assert_true(res._2 != TimeoutWatermark())
 
+class iso _TestTumblingWindowsEventTimes is UnitTest
+  fun name(): String => "windows/_TestTumblingWindowsEventTimes"
+
+  fun apply(h: TestHelper) ? =>
+    // given
+    let range: U64 = Seconds(3)
+    let tw = _TumblingWindow(range, _Sum)
+             .>apply(1, Seconds(111), Seconds(111))
+             .>apply(2, Seconds(112), Seconds(112))
+
+    // when
+    let res = tw(3, Seconds(113), Seconds(123))
+
+    // then
+    let res_array = _ForceArrayWithEventTimes(res._1)?
+    h.assert_eq[USize](res_array.size(), 1)
+    h.assert_eq[USize](res_array(0)?._1, 1 + 2 + 3)
+    h.assert_eq[U64](res_array(0)?._2, Seconds(123))
+    h.assert_eq[U64](res._2, Seconds(124))
+
 
 class iso _TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart is UnitTest
   fun name(): String => "windows/_TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart"
@@ -211,6 +231,13 @@ primitive _ForceArray
         a'.push(o)
       end
       consume a'
+    else error end
+
+primitive _ForceArrayWithEventTimes
+  fun apply(res: (USize | Array[USize] val | Array[(USize,U64)] val | None)):
+    Array[(USize,U64)] val ? =>
+    match res
+    | let a: Array[(USize, U64)] val => a
     else error end
 
 primitive _ForceArrayArray
