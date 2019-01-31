@@ -116,8 +116,7 @@ class iso _TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart is UnitTest
              .>apply(1, Milliseconds(5000), Milliseconds(5000))
 
     // when
-    let no_output_watermark = U64(0)
-    let res = tw.on_timeout(TimeoutWatermark(), no_output_watermark)
+    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(5000)-1)
 
     // then
     let res_array = _ForceArray(res._1)?
@@ -161,7 +160,7 @@ class iso _Test1 is UnitTest  // !@
              .>apply(13, Milliseconds(6051), Milliseconds(6051))
 
     // when
-    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(6051))
+    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(5350)-1)
 
     // then
     let res_array = _ForceArray(res._1)?
@@ -181,13 +180,29 @@ class iso _Test2 is UnitTest  // !@
              .>apply(24, Milliseconds(6250), Milliseconds(6250))
 
     // when
-    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(5350))
+    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(5350)-1)
 
     // then
     let res_array = _ForceArray(res._1)?
     h.assert_eq[USize](res_array.size(), 1)
     h.assert_eq[USize](res_array(0)?, 24)
     h.assert_eq[U64](res._2, Milliseconds(7050)-1)
+
+class iso _Test3 is UnitTest  // !@
+  fun name(): String =>
+    "windows/_Test3"
+
+  fun apply(h: TestHelper) =>
+    // given
+    let tw = _TumblingWindow(Milliseconds(50), _NonZeroSum)
+             .>apply(1, Milliseconds(5000), Milliseconds(5000))
+
+    // when
+    tw(3, Milliseconds(5300), Milliseconds(5300))
+
+    // then
+    h.assert_eq[U64](tw.earliest_start_ts(), Milliseconds(5300))
+    h.assert_eq[USize](tw.window_count(), 1)
 
 class iso _TestOutputWatermarkTsIsJustBeforeNextWindowStart is UnitTest
   fun name(): String =>
@@ -304,10 +319,9 @@ class iso _TestTumblingWindows is UnitTest
     tw(30, Seconds(112), Seconds(113))
     tw(40, Seconds(113), Seconds(114))
 
-    // Use this message to trigger windows 2 and 3,
-    // and the known-empty window just preceding window@Seconds(200)
+    // Use this message to trigger windows 2 and 3
     res = tw(1, Seconds(200), Seconds(201))
-    h.assert_array_eq[USize]([20;90;0], _ForceArray(res._1)?)
+    h.assert_array_eq[USize]([20;90], _ForceArray(res._1)?)
 
 
 class iso _TestSlidingWindows is UnitTest

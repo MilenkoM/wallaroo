@@ -31,10 +31,11 @@ actor Main is TestList
   new make() =>
     None
 
-  fun tag tests(test: PonyTest) =>
-    test(_Test0) // !@
+  // // fun tag tests(test: PonyTest) =>
+  //   test(_Test0) // !@
+  //   test(_Test3) // !@
 
-  fun tag xtests(test: PonyTest) =>
+  fun tag tests(test: PonyTest) =>
     // Windows
     test(_TestTumblingWindows)
     test(_TestOutputWatermarkTsIsJustBeforeNextWindowStart)
@@ -42,6 +43,7 @@ actor Main is TestList
     test(_Test0) // !@
     test(_Test1) // !@
     test(_Test2) // !@
+    test(_Test3) // !@
     test(_TestTumblingWindowsOutputEventTimes) // !@
     test(_TestSlidingWindowsOutputEventTimes) // !@
     test(_TestTumblingWindowsTimeoutTrigger)
