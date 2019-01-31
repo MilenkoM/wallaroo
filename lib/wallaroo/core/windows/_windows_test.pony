@@ -17,6 +17,7 @@ Copyright 2018 The Wallaroo Authors.
 */
 
 use "collections"
+use "itertools"
 use "ponytest"
 use "promises"
 use "wallaroo/core/aggregations"
@@ -55,15 +56,50 @@ class iso _TestTumblingWindowsEventTimes is UnitTest
              .>apply(2, Seconds(112), Seconds(112))
 
     // when
-    let res = tw(3, Seconds(113), Seconds(123))
+    let res = tw(3, Seconds(114), Seconds(114)+1) // !@
 
     // then
     let res_array = _ForceArrayWithEventTimes(res._1)?
     h.assert_eq[USize](res_array.size(), 1)
-    h.assert_eq[USize](res_array(0)?._1, 1 + 2 + 3)
-    h.assert_eq[U64](res_array(0)?._2, Seconds(123))
-    h.assert_eq[U64](res._2, Seconds(124))
+    h.assert_eq[USize](res_array(0)?._1, 1 + 2)
+    h.assert_eq[U64](res_array(0)?._2, Seconds(114)-1)
+    h.assert_eq[U64](res._2, Seconds(114)-1)
 
+class iso _TestSlidingWindowsEventTimes is UnitTest
+  fun name(): String => "windows/_TestSlidingWindowsEventTimes"
+
+  fun apply(h: TestHelper) ? =>
+    // given
+    let range: U64 = Seconds(10)
+    let slide: U64 = Seconds(5)
+    let delay: U64 = Seconds(10)
+    let sw = RangeWindows[USize, USize, _Total]("key", _Sum, range, slide,
+      delay)
+             .>apply(1, Seconds(111), Seconds(111))
+             .>apply(2, Seconds(121), Seconds(121))
+
+    // when
+    let res = sw(3, Seconds(150), Seconds(150))
+
+    // then
+    let res_array = _ForceArrayWithEventTimes(res._1)?
+
+    let values =
+      Iter[(USize,U64)](res_array.values())
+        .map[USize]({(x) => x._1})
+        .collect(Array[USize])
+
+    let times =
+      Iter[(USize,U64)](res_array.values())
+        .map[U64]({(x) => x._2})
+        .collect(Array[U64])
+
+    h.assert_array_eq[USize]([0;1;1;2;2], values)
+    h.assert_array_eq[U64]([Seconds(111)-1
+                            Seconds(116)-1
+                            Seconds(121)-1
+                            Seconds(126)-1
+                            Seconds(131)-1], times)
 
 class iso _TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart is UnitTest
   fun name(): String => "windows/_TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart"
@@ -84,7 +120,7 @@ class iso _TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart is UnitTest
     let res_array = _ForceArray(res._1)?
     h.assert_eq[USize](res_array.size(), 1)
     h.assert_eq[USize](res_array(0)?, 1)
-    h.assert_eq[U64](res._2, Milliseconds(5050))
+    h.assert_eq[U64](res._2, Milliseconds(5050)-1)
 
 class iso _Test0 is UnitTest  // !@
   fun name(): String =>
@@ -107,7 +143,7 @@ class iso _Test0 is UnitTest  // !@
     let res_array = _ForceArray(res._1)?
     h.assert_eq[USize](res_array.size(), 1)
     h.assert_eq[USize](res_array(0)?, 3)
-    h.assert_eq[U64](res._2, Milliseconds(5350))
+    h.assert_eq[U64](res._2, Milliseconds(5350)-1)
 
 class iso _Test1 is UnitTest  // !@
   fun name(): String =>
@@ -128,7 +164,7 @@ class iso _Test1 is UnitTest  // !@
     let res_array = _ForceArray(res._1)?
     h.assert_eq[USize](res_array.size(), 1)
     h.assert_eq[USize](res_array(0)?, 24)
-    h.assert_eq[U64](res._2, Milliseconds(6100))
+    h.assert_eq[U64](res._2, Milliseconds(6100)-1)
 
 class iso _Test2 is UnitTest  // !@
   fun name(): String =>
@@ -148,7 +184,7 @@ class iso _Test2 is UnitTest  // !@
     let res_array = _ForceArray(res._1)?
     h.assert_eq[USize](res_array.size(), 1)
     h.assert_eq[USize](res_array(0)?, 24)
-    h.assert_eq[U64](res._2, Milliseconds(7050))
+    h.assert_eq[U64](res._2, Milliseconds(7050)-1)
 
 class iso _TestOutputWatermarkTsIsJustBeforeNextWindowStart is UnitTest
   fun name(): String =>
@@ -172,53 +208,8 @@ class iso _TestOutputWatermarkTsIsJustBeforeNextWindowStart is UnitTest
     let res_array = _ForceArray(res._1)?
     h.assert_eq[USize](res_array.size(), 1)
     h.assert_eq[USize](res_array(0)?, 1)
-    h.assert_eq[U64](res._2, Milliseconds(5050))
+    h.assert_eq[U64](res._2, Milliseconds(5050)-1)
 
-
-class iso _TestMessageAssignmentToTumblingWindows is UnitTest
-  fun name(): String => "windows/_TestMessageAssignmentToTumblingWindows"
-
-  fun apply(h: TestHelper) ? =>
-    // given
-    let range: U64 = Milliseconds(50)
-    let slide = range
-    let delay: U64 = 0
-    let upstream_id: U128 = 1000
-    let now: U64 = 1000
-    let tw = RangeWindows[USize, USize, _Total]("key", _NonZeroSum, range, slide,
-      delay)
-
-    // when
-    let r1 = tw(1, Milliseconds(5000), Milliseconds(5000))
-    let r2 = tw(3, Milliseconds(5100), Milliseconds(5100))
-    let r3 = tw(5, Milliseconds(5200), Milliseconds(5200))
-    let r4 = tw(1, Milliseconds(5300), Milliseconds(5300))
-    let r5 = tw.on_timeout(TimeoutWatermark(), r4._2)
-
-    // then
-    let r1_array = _ForceArray(r1._1)?
-    h.assert_eq[USize](r1_array.size(), 0)
-    h.assert_eq[U64](r1._2, 0) // we expect 5050 (should be `5050)` )
-
-    let r2_array = _ForceArray(r2._1)?
-    h.assert_eq[USize](r2_array.size(), 1)
-    h.assert_eq[USize](r2_array(0)?, 1)
-    h.assert_eq[U64](r2._2, Milliseconds(5050))
-
-    let r3_array = _ForceArray(r3._1)?
-    h.assert_eq[USize](r3_array.size(), 1)
-    h.assert_eq[USize](r3_array(0)?, 3)
-    h.assert_eq[U64](r3._2, Milliseconds(5150))
-
-    let r4_array = _ForceArray(r4._1)?
-    h.assert_eq[USize](r4_array.size(), 1)
-    h.assert_eq[USize](r4_array(0)?, 5)
-    h.assert_eq[U64](r4._2, Milliseconds(5250))
-
-    let r5_array = _ForceArray(r5._1)?
-    h.assert_eq[USize](r5_array.size(), 1)
-    h.assert_eq[USize](r5_array(0)?, 1)
-    h.assert_eq[U64](r5._2, Milliseconds(5350))
 
 primitive _ForceArray
   fun apply(res: (USize | Array[USize] val | Array[(USize,U64)] val | None)):

@@ -183,8 +183,7 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
   =>
     try
       let earliest_ts = _earliest_ts()?
-//      let window_end_ts = earliest_ts + (_range - 1) TODO uncomment me
-      let window_end_ts = earliest_ts + _range
+      let window_end_ts = earliest_ts + (_range - 1)
       if _should_trigger(earliest_ts, watermark_ts) then
         (let out, let output_watermark_ts) = _trigger_next(earliest_ts,
           window_end_ts, trigger_diff)?
