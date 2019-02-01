@@ -34,7 +34,7 @@ class iso _TestTumblingWindowsTimeoutTrigger is UnitTest
     let watermark: U64 = Seconds(111)
     let range: U64 = Seconds(1)
     let tw = _TumblingWindow(range, _Sum)
-            .>apply(111, watermark, watermark)
+             .>apply(111, watermark, watermark)
 
     // when
     let res = tw.on_timeout(TimeoutWatermark(), watermark)
@@ -154,13 +154,28 @@ class iso _Test1 is UnitTest  // !@
   fun apply(h: TestHelper) ? =>
     // given
     let tw = _TumblingWindow(Milliseconds(50), _NonZeroSum)
+    // when
+    let res = tw(1, Milliseconds(5000), Milliseconds(5000))
+    // then
+    h.assert_array_eq[USize]([1], _ForceArray(res._1)?)
+
+
+class iso _Test10 is UnitTest  // !@
+  fun name(): String =>
+    "windows/_Test10"
+
+  fun apply(h: TestHelper) ? =>
+    // given
+    let tw = _TumblingWindow(Milliseconds(50000), _NonZeroSum)
              .>apply(1, Milliseconds(5000), Milliseconds(5000))
              .>apply(3, Milliseconds(5300), Milliseconds(5300))
              .>apply(11, Milliseconds(6050), Milliseconds(6050))
              .>apply(13, Milliseconds(6051), Milliseconds(6051))
+             .>apply(13, Milliseconds(6052), Milliseconds(6052))
+             .>apply(13, Milliseconds(6053), Milliseconds(6053))
 
     // when
-    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(5350)-1)
+    let res = tw.on_timeout(TimeoutWatermark(), 0)
 
     // then
     let res_array = _ForceArray(res._1)?
@@ -180,7 +195,7 @@ class iso _Test2 is UnitTest  // !@
              .>apply(24, Milliseconds(6250), Milliseconds(6250))
 
     // when
-    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(5350)-1)
+    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(6250))
 
     // then
     let res_array = _ForceArray(res._1)?

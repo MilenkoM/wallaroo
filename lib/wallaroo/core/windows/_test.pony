@@ -31,11 +31,10 @@ actor Main is TestList
   new make() =>
     None
 
-  // // fun tag tests(test: PonyTest) =>
-  //   test(_Test0) // !@
-  //   test(_Test3) // !@
-
   fun tag tests(test: PonyTest) =>
+     test(_Test1) // !@
+
+  fun tag xtests(test: PonyTest) =>
     // Windows
     test(_TestTumblingWindows)
     test(_TestOutputWatermarkTsIsJustBeforeNextWindowStart)
