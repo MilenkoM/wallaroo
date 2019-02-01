@@ -32,23 +32,22 @@ actor Main is TestList
     None
 
   fun tag tests(test: PonyTest) =>
-     test(_Test1) // !@
-
-  fun tag xtests(test: PonyTest) =>
     // Windows
+/*
     test(_TestTumblingWindows)
     test(_TestOutputWatermarkTsIsJustBeforeNextWindowStart)
     test(_TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart)
-    test(_Test0) // !@
-    test(_Test1) // !@
-    test(_Test2) // !@
-    test(_Test3) // !@
-    test(_TestTumblingWindowsOutputEventTimes) // !@
-    test(_TestSlidingWindowsOutputEventTimes) // !@
+    test(_TestEventInNewWindowCausesPreviousToFlush)
+    test(_TestTimeoutAfterEndOfWindowCausesFlush)
+    test(_TestTumblingWindowCountIsCorrectAfterFlush)
+    test(_TestTumblingWindowsOutputEventTimes)
+    test(_TestSlidingWindowsOutputEventTimes)
     test(_TestTumblingWindowsTimeoutTrigger)
-    test(_TestSlidingWindows)
-    test(_TestSlidingWindowsNoDelay)
+    test(_TestSlidingWindows) // broken
+    test(_TestSlidingWindowsNoDelay) // broken
+    */
     test(_TestSlidingWindowsOutOfOrder)
+    /*
     test(_TestSlidingWindowsGCD)
     test(_TestSlidingWindowsLateData)
     test(_TestSlidingWindowsEarlyData)
@@ -64,3 +63,4 @@ actor Main is TestList
     // // Watermarks
     test(_TestTimeoutTriggerWatermark)
     test(_TestStageWatermarks)
+*/

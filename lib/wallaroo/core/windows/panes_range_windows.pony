@@ -93,12 +93,12 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
 
   fun ref apply(input: In, event_ts: U64, watermark_ts: U64): WindowOutputs[Out]
   =>
+//  @printf[I32]("&&&&&&&& apply is called %s %s\n".cstring(), event_ts.string().cstring(), watermark_ts.string().cstring())
     _highest_seen_event_ts = _highest_seen_event_ts.max(event_ts)
     try
       (let earliest_ts, let end_ts) = _earliest_and_end_ts()?
       var applied = false
       if not _is_past_end_ts(event_ts, end_ts) then
-        @printf[I32]("applying earlier\n".cstring())
         _apply_input(input, event_ts, earliest_ts)
         applied = true
       end
@@ -115,7 +115,6 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
           _expand_windows(event_ts, new_end_ts)?
           new_earliest_ts = _earliest_ts()?
         end
-        @printf[I32]("applying later\n".cstring())
         _apply_input(input, event_ts, new_earliest_ts)
       end
       (outs, output_watermark_ts)
@@ -157,24 +156,24 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
 
   fun ref attempt_to_trigger(input_watermark_ts: U64): (Array[(Out, U64)] val, U64)
   =>
-    @printf[I32]("attempting to trigger with iwt=%s\n".cstring(), input_watermark_ts.string().cstring())
+//    @printf[I32]("attempting to trigger with iwt=%s\n".cstring(), input_watermark_ts.string().cstring())
     let outs = recover iso Array[(Out, U64)] end
     var output_watermark_ts: U64 = 0
 
     let effective_watermark_ts =
       if input_watermark_ts == TimeoutWatermark() then
-        _highest_seen_event_ts + (_delay + 1)
+//        input_watermark_ts +  (_range + _delay)
+        _highest_seen_event_ts + (_range + _delay)
       else
         input_watermark_ts
       end
-      @printf[I32]("effectiv wtrmk=%s\n".cstring(), effective_watermark_ts.string().cstring())
+//      @printf[I32]("we are at flushwatermark: effective watermark is %s, highest seen is %s \n".cstring(), effective_watermark_ts.string().cstring(), _highest_seen_event_ts.string().cstring())
+//      @printf[I32]("effectiv wtrmk=%s\n".cstring(), effective_watermark_ts.string().cstring())
 
     try
       (let earliest_ts, let end_ts) = _earliest_and_end_ts()?
       let first_ts_after_active_windows = end_ts + 1
-      let freshest_triggered_window_start_ts =
-        effective_watermark_ts - (_delay - 1)
-
+      let freshest_triggered_window_start_ts = effective_watermark_ts - _delay
       let trigger_diff =
         if freshest_triggered_window_start_ts > first_ts_after_active_windows
         then
@@ -187,7 +186,7 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
       while not stopped do
         (let next_out, let out_event_ts, stopped) =
           _check_first_window(effective_watermark_ts, trigger_diff)
-          @printf[I32]("after checking first window: out_event_ts=%s stopped=%s\n".cstring(), out_event_ts.string().cstring(), stopped.string().cstring())
+//          @printf[I32]("after checking first window: out_event_ts=%s stopped=%s\n".cstring(), out_event_ts.string().cstring(), stopped.string().cstring())
         output_watermark_ts = output_watermark_ts.max(out_event_ts)
         match next_out
         | let out: Out =>
@@ -303,7 +302,7 @@ class _PanesSlidingWindows[In: Any val, Out: Any val, Acc: State ref] is
   fun check_panes_increasing(): Bool =>
     try
       var last_ts = _earliest_ts()?
-      for offset in Range(1, _panes.size()+1) do
+      for offset in Range(1, _panes.size()) do
         let next_idx = (_earliest_window_idx + offset) % _panes.size()
         let next_ts = _panes_start_ts(next_idx)?
         if next_ts < last_ts then

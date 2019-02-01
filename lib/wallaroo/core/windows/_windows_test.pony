@@ -105,7 +105,8 @@ class iso _TestSlidingWindowsOutputEventTimes is UnitTest
 // 'in the future' comes in.
 
 class iso _TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart is UnitTest
-  fun name(): String => "windows/_TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart"
+  fun name(): String =>
+    "windows/_TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart"
 
   fun apply(h: TestHelper) ? =>
     // given
@@ -124,41 +125,36 @@ class iso _TestOnTimeoutWatermarkTsIsJustBeforeNextWindowStart is UnitTest
     h.assert_eq[USize](res_array(0)?, 1)
     h.assert_eq[U64](res._2, Milliseconds(5050)-1)
 
-class iso _Test0 is UnitTest  // !@
+
+class iso _TestEventInNewWindowCausesPreviousToFlush is UnitTest
   fun name(): String =>
-    "windows/_Test0"
-
-  fun apply(h: TestHelper) ? =>
-    // given
-    let range: U64 = Milliseconds(50)
-    let slide = range
-    let delay: U64 = 0
-    let tw = RangeWindows[USize, USize, _Total]("key", _NonZeroSum, range, slide,
-      delay)
-            .>apply(1, Milliseconds(5000), Milliseconds(5000))
-            .>apply(3, Milliseconds(5300), Milliseconds(5300))
-
-    // when
-    let res = tw(11, Milliseconds(6050), Milliseconds(6050))
-
-    // then
-    let res_array = _ForceArray(res._1)?
-    h.assert_eq[USize](res_array.size(), 1)
-    h.assert_eq[USize](res_array(0)?, 3)
-    h.assert_eq[U64](res._2, Milliseconds(5350)-1)
-
-class iso _Test1 is UnitTest  // !@
-  fun name(): String =>
-    "windows/_Test1"
+    "windows/_TestEventInNewWindowCausesPreviousToFlush"
 
   fun apply(h: TestHelper) ? =>
     // given
     let tw = _TumblingWindow(Milliseconds(50), _NonZeroSum)
+             .>apply(1, Milliseconds(5000), Milliseconds(5000))
+             .>apply(2, Milliseconds(5025), Milliseconds(5025))
     // when
-    let res = tw(1, Milliseconds(5000), Milliseconds(5000))
-    // then
-    h.assert_array_eq[USize]([1], _ForceArray(res._1)?)
+    let res = tw(10, Milliseconds(5055), Milliseconds(5055))
 
+    // then
+    h.assert_array_eq[USize]([3], _ForceArray(res._1)?)
+
+class iso _TestTimeoutAfterEndOfWindowCausesFlush is UnitTest
+  fun name(): String =>
+    "windows/_TestTimeoutAfterEndOfWindowCausesFlush"
+
+  fun apply(h: TestHelper) ? =>
+    // given
+    let tw = _TumblingWindow(Milliseconds(50), _NonZeroSum)
+             .>apply(1, Milliseconds(5000), Milliseconds(5000))
+             .>apply(2, Milliseconds(5025), Milliseconds(5025))
+    // when
+    let res = tw.on_timeout(TimeoutWatermark(), 0)//second param doesn't matter
+
+    // then
+    h.assert_array_eq[USize]([3], _ForceArray(res._1)?)
 
 class iso _Test10 is UnitTest  // !@
   fun name(): String =>
@@ -183,29 +179,9 @@ class iso _Test10 is UnitTest  // !@
     h.assert_eq[USize](res_array(0)?, 24)
     h.assert_eq[U64](res._2, Milliseconds(6100)-1)
 
-class iso _Test2 is UnitTest  // !@
+class iso _TestTumblingWindowCountIsCorrectAfterFlush is UnitTest
   fun name(): String =>
-    "windows/_Test2"
-
-  fun apply(h: TestHelper) ? =>
-    // given
-    let tw = _TumblingWindow(Seconds(1), _NonZeroSum)
-             .>apply(1, Milliseconds(5050), Milliseconds(5050))
-             .>apply(3, Milliseconds(5350), Milliseconds(5350))
-             .>apply(24, Milliseconds(6250), Milliseconds(6250))
-
-    // when
-    let res = tw.on_timeout(TimeoutWatermark(), Milliseconds(6250))
-
-    // then
-    let res_array = _ForceArray(res._1)?
-    h.assert_eq[USize](res_array.size(), 1)
-    h.assert_eq[USize](res_array(0)?, 24)
-    h.assert_eq[U64](res._2, Milliseconds(7050)-1)
-
-class iso _Test3 is UnitTest  // !@
-  fun name(): String =>
-    "windows/_Test3"
+    "windows/_TestTumblingWindowCountIsCorrectAfterFlush"
 
   fun apply(h: TestHelper) =>
     // given
@@ -242,55 +218,6 @@ class iso _TestOutputWatermarkTsIsJustBeforeNextWindowStart is UnitTest
     h.assert_eq[USize](res_array.size(), 1)
     h.assert_eq[USize](res_array(0)?, 1)
     h.assert_eq[U64](res._2, Milliseconds(5050)-1)
-
-
-primitive _ForceArray
-  fun apply(res: (USize | Array[USize] val | Array[(USize,U64)] val | None)):
-    Array[USize] val ? =>
-    match res
-    | let a: Array[(USize, U64)] val =>
-      // !@ return the tuple itself after all tests pass
-      let a' = recover iso Array[USize] end
-      for (o,ts) in a.values() do
-        a'.push(o)
-      end
-      consume a'
-    else error end
-
-primitive _ForceArrayWithEventTimes
-  fun apply(res: (USize | Array[USize] val | Array[(USize,U64)] val | None)):
-    Array[(USize,U64)] val ? =>
-    match res
-    | let a: Array[(USize, U64)] val => a
-    else error end
-
-primitive _ForceArrayArray
-  fun apply(res: (Array[USize] val
-                  | Array[Array[USize] val] val
-                  | Array[(Array[USize] val, U64)] val
-                  | None)): Array[Array[USize] val] val ?
-  =>
-    match res
-    | let a: Array[(Array[USize] val, U64)] val =>
-      // !@ return the tuple itself after all tests pass
-      let a' = recover iso Array[Array[USize] val] end
-      for (subarray, _) in a.values() do
-        let a'' = recover iso Array[USize] end
-        for o in subarray.values() do
-          a''.push(o)
-        end
-        a'.push(consume a'')
-      end
-      consume a'
-    else error end
-
-primitive _TumblingWindow
-  fun apply(range: U64, calculation: Aggregation[USize, USize, _Total]):
-    RangeWindows[USize, USize, _Total]
-  =>
-    let slide = range
-    let delay: U64 = 0
-    RangeWindows[USize, USize, _Total]("key", _NonZeroSum, range, slide, delay)
 
 
 class iso _TestTumblingWindows is UnitTest
@@ -337,7 +264,6 @@ class iso _TestTumblingWindows is UnitTest
     // Use this message to trigger windows 2 and 3
     res = tw(1, Seconds(200), Seconds(201))
     h.assert_array_eq[USize]([20;90], _ForceArray(res._1)?)
-
 
 class iso _TestSlidingWindows is UnitTest
   fun name(): String => "windows/_TestSlidingWindows"
@@ -562,73 +488,31 @@ class iso _TestSlidingWindowsOutOfOrder is UnitTest
       delay)
 
     // First 2 windows values
-    var res = sw(5, Seconds(95), Seconds(100))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 0)
-
-    res = sw(4, Seconds(94), Seconds(102))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 0)
-
-    res = sw(3, Seconds(93), Seconds(103))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 0)
-
-    res = sw(2, Seconds(92), Seconds(104))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 0)
-
+    h.assert_array_eq[USize]([0], _OutArray(sw(5, Seconds(95), Seconds(100)))?)
+    h.assert_array_eq[USize]([0], _OutArray(sw(4, Seconds(94), Seconds(102)))?)
+    h.assert_array_eq[USize]([ ], _OutArray(sw(3, Seconds(93), Seconds(103)))?)
+    h.assert_array_eq[USize]([5], _OutArray(sw(2, Seconds(92), Seconds(104)))?)
     h.assert_eq[Bool](sw.check_panes_increasing(), true)
 
     // Second 2 windows with values
-    res = sw(4, Seconds(105), Seconds(106))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 5)
-
-    res = sw(3, Seconds(104), Seconds(107))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 14)
-
-    res = sw(2, Seconds(103), Seconds(108))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 0)
-
-    res = sw(1, Seconds(102), Seconds(109))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 14)
-
+    h.assert_array_eq[USize]([14], _OutArray(sw(4, Seconds(105), Seconds(106)))?)
+    h.assert_array_eq[USize]([  ], _OutArray(sw(3, Seconds(104), Seconds(107)))?)
+    h.assert_array_eq[USize]([14], _OutArray(sw(2, Seconds(103), Seconds(108)))?)
+    h.assert_array_eq[USize]([], _OutArray(sw(1, Seconds(102), Seconds(109)))?)
     h.assert_eq[Bool](sw.check_panes_increasing(), true)
 
     // Third 2 windows with values.
-    res = sw(40, Seconds(111), Seconds(112))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 14)
-
-    res = sw(30, Seconds(110), Seconds(113))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 14)
-
-    res = sw(20, Seconds(109), Seconds(114))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 0)
-
-    res = sw(10, Seconds(108), Seconds(115))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 1)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 12)
-
+    h.assert_array_eq[USize]([14; 14],
+      _OutArray(sw(40, Seconds(111), Seconds(112)))?)
+    h.assert_array_eq[USize]([  ], _OutArray(sw(30, Seconds(110), Seconds(113)))?)
+    h.assert_array_eq[USize]([12], _OutArray(sw(20, Seconds(109), Seconds(114)))?)
+    h.assert_array_eq[USize]([], _OutArray(sw(10, Seconds(108), Seconds(115)))?)
     h.assert_eq[Bool](sw.check_panes_increasing(), true)
 
     // Fourth set of windows
-    // Use this message to trigger 10 windows.
-    res = sw(2, Seconds(192), Seconds(200))
-    h.assert_eq[USize](_ForceArray(res._1)?.size(), 10)
-    h.assert_eq[USize](_ForceArray(res._1)?(0)?, 10)
-    h.assert_eq[USize](_ForceArray(res._1)?(1)?, 10)
-    h.assert_eq[USize](_ForceArray(res._1)?(2)?, 40)
-    h.assert_eq[USize](_ForceArray(res._1)?(3)?, 110)
-    h.assert_eq[USize](_ForceArray(res._1)?(4)?, 107)
-    h.assert_eq[USize](_ForceArray(res._1)?(5)?, 100)
-    h.assert_eq[USize](_ForceArray(res._1)?(6)?, 100)
-    h.assert_eq[USize](_ForceArray(res._1)?(7)?, 70)
-    h.assert_eq[USize](_ForceArray(res._1)?(8)?, 0)
-    h.assert_eq[USize](_ForceArray(res._1)?(9)?, 0)
-
+    h.assert_array_eq[USize]([10;10;40;110;107;100;100;70;0;0],
+            // Use the below message to trigger 10 windows.
+    _OutArray(sw(2, Seconds(192), Seconds(200)))?)
     h.assert_eq[Bool](sw.check_panes_increasing(), true)
 
 
@@ -1276,3 +1160,56 @@ primitive CheckAnyDecreaseOrIncreaseByOne
       false
     end
     true
+
+primitive _OutArray
+  fun apply(outs_ts: ((USize | Array[USize] val | Array[(USize,U64)] val | None)
+                      , U64)): Array[USize] val ? =>
+    _ForceArray(outs_ts._1)?
+
+primitive _ForceArray
+  fun apply(res: (USize | Array[USize] val | Array[(USize,U64)] val | None)):
+    Array[USize] val ? =>
+    match res
+    | let a: Array[(USize, U64)] val =>
+      // !@ return the tuple itself after all tests pass
+      let a' = recover iso Array[USize] end
+      for (o,ts) in a.values() do
+        a'.push(o)
+      end
+      consume a'
+    else error end
+
+primitive _ForceArrayWithEventTimes
+  fun apply(res: (USize | Array[USize] val | Array[(USize,U64)] val | None)):
+    Array[(USize,U64)] val ? =>
+    match res
+    | let a: Array[(USize, U64)] val => a
+    else error end
+
+primitive _ForceArrayArray
+  fun apply(res: (Array[USize] val
+                  | Array[Array[USize] val] val
+                  | Array[(Array[USize] val, U64)] val
+                  | None)): Array[Array[USize] val] val ?
+  =>
+    match res
+    | let a: Array[(Array[USize] val, U64)] val =>
+      // !@ return the tuple itself after all tests pass
+      let a' = recover iso Array[Array[USize] val] end
+      for (subarray, _) in a.values() do
+        let a'' = recover iso Array[USize] end
+        for o in subarray.values() do
+          a''.push(o)
+        end
+        a'.push(consume a'')
+      end
+      consume a'
+    else error end
+
+primitive _TumblingWindow
+  fun apply(range: U64, calculation: Aggregation[USize, USize, _Total]):
+    RangeWindows[USize, USize, _Total]
+  =>
+    let slide = range
+    let delay: U64 = 0
+    RangeWindows[USize, USize, _Total]("key", _NonZeroSum, range, slide, delay)
